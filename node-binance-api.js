@@ -8,7 +8,6 @@
 
 module.exports = function() {
 	'use strict';
-	const WebSocket = require('ws');
 	const request = require('request');
 	const crypto = require('crypto');
 	const base = 'https://api.binance.com/api/';
@@ -22,7 +21,7 @@ module.exports = function() {
 	let info = {};
 	let ohlc = {};
 	let options = {recvWindow:60000, reconnect:true};
-	
+
 	const publicRequest = function(url, data, callback, method = "GET") {
 		if ( !data ) data = {};
 		let opt = {
@@ -41,7 +40,7 @@ module.exports = function() {
 			if ( callback ) callback(JSON.parse(body));
 		});
 	};
-	
+
 	const apiRequest = function(url, callback, method = "GET") {
 		if ( !options.APIKEY ) throw "apiRequest: Invalid API Key";
 		let opt = {
@@ -60,7 +59,7 @@ module.exports = function() {
 			if ( callback ) callback(JSON.parse(body));
 		});
 	};
-		
+
 	const signedRequest = function(url, data, callback, method = "GET") {
 		if ( !options.APISECRET ) throw "signedRequest: Invalid API Secret";
 		if ( !data ) data = {};
@@ -85,7 +84,7 @@ module.exports = function() {
 			if ( callback ) callback(JSON.parse(body));
 		});
 	};
-	
+
 	const order = function(side, symbol, quantity, price, flags = {}, callback = false) {
 		let opt = {
 			symbol: symbol,
@@ -112,10 +111,10 @@ module.exports = function() {
 	const subscribe = function(endpoint, callback, reconnect = false) {
 		const ws = new WebSocket(websocket_base+endpoint);
 		ws.endpoint = endpoint;
-	    ws.on('open', function() {
+    ws.onopen = function (event) {
 			//console.log("subscribe("+this.endpoint+")");
-		});
-		ws.on('close', function() {
+		};
+		ws.onclose = function() {
 			if ( reconnect && options.reconnect ) {
 				if ( this.endpoint && this.endpoint.length == 60 ) console.log("Account data WebSocket reconnecting..");
 				else console.log("WebSocket reconnecting: "+this.endpoint);
@@ -125,11 +124,11 @@ module.exports = function() {
 					console.log("WebSocket reconnect error: "+error.message);
 				}
 			} else console.log("WebSocket connection closed! "+this.endpoint);
-		});
-		ws.on('message', function(data) {
-			//console.log(data);
-            callback(JSON.parse(data));
-		});
+		};
+		ws.onmessage = function(message) {
+			//console.log(message.data);
+			callback(JSON.parse(message.data));
+		};
 		subscriptions[endpoint] = ws;
 		return ws;
 	};
@@ -496,7 +495,7 @@ module.exports = function() {
 		historicalTrades: function(symbol, callback, limit = 500) {
 			signedRequest(base+"v1/historicalTrades", {symbol:symbol, limit:limit}, callback);
 		},
-		// convert chart data to highstock array [timestamp,open,high,low,close] 
+		// convert chart data to highstock array [timestamp,open,high,low,close]
 		highstock: function(chart, include_volume = false) {
 			let array = [];
 			for ( let timestamp in chart ) {
@@ -572,7 +571,7 @@ module.exports = function() {
 				let ws = subscriptions[endpoint];
 				if ( !ws ) return;
 				console.log("WebSocket terminated:", endpoint);
-				ws.terminate();
+				ws.close();
 				delete subscriptions[endpoint];
 			},
 			depth: function depth(symbols, callback) {
@@ -611,7 +610,7 @@ module.exports = function() {
 			trades: function(symbols, callback) {
 				for ( let symbol of symbols ) {
 					let reconnect = function() {
-						if ( options.reconnect ) subscribe(symbol.toLowerCase()+"@aggTrade", callback);
+						if ( options.reconnect ) subscribe(symbol.toLowerCase()+"@aggTrade", callback, reconnect);
 					};
 					subscribe(symbol.toLowerCase()+"@aggTrade", callback, reconnect);
 				}
