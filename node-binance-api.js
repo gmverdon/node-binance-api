@@ -571,7 +571,7 @@ module.exports = function() {
 				let ws = subscriptions[endpoint];
 				if ( !ws ) return;
 				console.log("WebSocket terminated:", endpoint);
-				ws.close();
+				ws.onclose();
 				delete subscriptions[endpoint];
 			},
 			depth: function depth(symbols, callback) {
