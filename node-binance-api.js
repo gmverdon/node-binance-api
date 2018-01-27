@@ -207,7 +207,8 @@ LIMIT_MAKER
 		ws.onmessage = function(data) {
 			//console.log(data);
 			try {
-				callback(JSON.parse(data));
+				// FIX: parsing just data will result in parse error
+				callback(JSON.parse(data.data));
 			} catch (error) {
 				console.error('Parse error: '+error.message);
 			}
